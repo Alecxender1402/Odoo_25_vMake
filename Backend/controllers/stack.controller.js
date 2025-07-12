@@ -3,12 +3,36 @@ import { StackVote } from '../models/StackVote.js';
 import { Comment } from '../models/Comment.js';
 import { CommentVote } from '../models/CommentVote.js';
 
-// @desc    Get all stacks
+// @desc    Get all stacks with filtering and sorting
 // @route   GET /api/stacks
 // @access  Public
 export const getAllStacks = async (req, res) => {
   try {
-    const stacks = await Stack.find().populate('creator', 'username').sort({ createdAt: -1 });
+    const { sort, tags, unanswered } = req.query;
+
+    const query = {};
+    let sortOptions = {};
+
+    if (unanswered === 'true') {
+      query.solution = null;
+    }
+
+    if (tags) {
+      query.tags = { $in: tags.split(',') };
+    }
+
+    switch (sort) {
+      case 'popular':
+        sortOptions = { voteScore: -1 };
+        break;
+      case 'newest':
+      default:
+        sortOptions = { createdAt: -1 };
+        break;
+    }
+
+    const stacks = await Stack.find(query).populate('creator', 'username').sort(sortOptions);
+
     res.status(200).json(stacks);
   } catch (error) {
     res.status(500).json({ message: 'Something went wrong.', error: error.message });

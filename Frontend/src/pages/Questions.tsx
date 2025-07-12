@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Plus, Search, Filter, TrendingUp, Clock } from "lucide-react";
 import AskQuestionModal from "@/components/layout/AskQuestionModal";
 import { useToast } from "@/hooks/use-toast";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { useUrlPagination } from "@/hooks/useUrlPagination";
 
 interface QuestionsProps {
   currentUser: User;
@@ -81,6 +83,19 @@ const Questions = ({ currentUser, onLogin, questions, onAddQuestion, onVote, onD
         return filtered;
     }
   }, [questions, searchTerm, selectedTag, sortBy]);
+
+  // Pagination with URL synchronization
+  const {
+    data: paginatedQuestions,
+    pagination,
+    goToPage,
+    goToNextPage,
+    goToPreviousPage,
+    changeItemsPerPage,
+  } = useUrlPagination(filteredQuestions, {
+    defaultPage: 1,
+    defaultLimit: 10
+  });
 
   // Modal handlers
   const handleAskQuestion = () => setIsAskModalOpen(true);
@@ -232,7 +247,7 @@ const Questions = ({ currentUser, onLogin, questions, onAddQuestion, onVote, onD
             </div>
 
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span>{filteredQuestions.length} questions</span>
+              <span>{pagination.totalItems} questions</span>
               {selectedTag !== "all" && (
                 <Badge variant="secondary" className="cursor-pointer" onClick={() => setSelectedTag("all")}>
                   {selectedTag} ✕
@@ -281,14 +296,33 @@ const Questions = ({ currentUser, onLogin, questions, onAddQuestion, onVote, onD
       <div className="container py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-4">
-            {filteredQuestions.length > 0 ? (
-              <QuestionList 
-                questions={filteredQuestions} 
-                currentUser={currentUser}
-                onVote={onVote} 
-                onTagClick={handleTagClickFromCard}
-                onDelete={handleDeleteQuestion}
-              />
+            {pagination.totalItems > 0 ? (
+              <div className="space-y-6">
+                <QuestionList 
+                  questions={paginatedQuestions} 
+                  currentUser={currentUser}
+                  onVote={onVote} 
+                  onTagClick={handleTagClickFromCard}
+                  onDelete={handleDeleteQuestion}
+                />
+                
+                {/* Pagination Controls */}
+                <PaginationControls
+                  currentPage={pagination.currentPage}
+                  totalPages={pagination.totalPages}
+                  totalItems={pagination.totalItems}
+                  itemsPerPage={pagination.itemsPerPage}
+                  startIndex={pagination.startIndex}
+                  endIndex={pagination.endIndex}
+                  hasNextPage={pagination.hasNextPage}
+                  hasPreviousPage={pagination.hasPreviousPage}
+                  onPageChange={goToPage}
+                  onNextPage={goToNextPage}
+                  onPreviousPage={goToPreviousPage}
+                  onItemsPerPageChange={changeItemsPerPage}
+                  itemsPerPageOptions={[5, 10, 20, 50]}
+                />
+              </div>
             ) : (
               <div className="text-center py-12">
                 <div className="text-muted-foreground mb-4">

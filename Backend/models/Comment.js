@@ -19,6 +19,22 @@ const commentSchema = new Schema(
       ref: 'Stack',
       required: true,
     },
+    isSolution: {
+      type: Boolean,
+      default: false,
+    },
+    voteScore: {
+      type: Number,
+      default: 0,
+    },
+    upvotes: {
+      type: Number,
+      default: 0,
+    },
+    downvotes: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,

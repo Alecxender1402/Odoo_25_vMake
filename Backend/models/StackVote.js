@@ -14,6 +14,11 @@ const voteSchema = new Schema(
       ref: 'Stack',
       required: true,
     },
+    type: {
+      type: String,
+      enum: ['up', 'down'],
+      required: true,
+    },
   },
   {
     timestamps: true,

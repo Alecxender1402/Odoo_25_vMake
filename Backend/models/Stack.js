@@ -1,36 +1,44 @@
 import mongoose from 'mongoose';
+
 const { Schema, model } = mongoose;
 
-const stackSchema = new Schema({
+const stackSchema = new Schema(
+  {
     title: {
-        type: String,
-        required: [true, 'Stack title is required.'],
-        trim: true
+      type: String,
+      required: [true, 'Stack title is required.'],
+      trim: true,
     },
     description: {
-        type: String,
-        required: [true, 'Stack description is required.'],
-        trim: true
+      type: String,
+      required: [true, 'Stack description is required.'],
+      trim: true,
     },
-    technologies: [{
+    technologies: [
+      {
         type: String,
-        trim: true
-    }],
+        trim: true,
+      },
+    ],
     creator: {
-        type: Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
     },
     upvoteCount: {
-        type: Number,
-        default: 0 
+      type: Number,
+      default: 0,
     },
-    comments: [{
+    comments: [
+      {
         type: Schema.Types.ObjectId,
-        ref: 'Comment'
-    }]
-}, {
-    timestamps: true
-});
+        ref: 'Comment',
+      },
+    ],
+  },
+  {
+    timestamps: true,
+  }
+);
 
 export const Stack = mongoose.models.Stack || model('Stack', stackSchema);

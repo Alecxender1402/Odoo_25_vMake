@@ -1,10 +1,10 @@
 import express from 'express';
 import {
-    getAllStacks,
-    getStackById,
-    createStack,
-    upvoteStack,
-    addComment
+  getAllStacks,
+  getStackById,
+  createStack,
+  upvoteStack,
+  addComment,
 } from '../controllers/stack.controller.js';
 import { verifyToken } from '../middlewares/auth.middleware.js';
 
@@ -14,7 +14,6 @@ const router = express.Router();
 // Anyone can view all stacks or a single stack
 router.get('/', getAllStacks);
 router.get('/:id', getStackById);
-
 
 /* --- PRIVATE ROUTES --- */
 // Only logged-in users can create, vote, or comment

@@ -16,19 +16,20 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
-const MONGO_URI = process.env.MONGO_URI;
+const { MONGO_URI } = process.env;
 
-mongoose.connect(MONGO_URI)
-    .then(() => {
-        console.log('Successfully connected to MongoDB.');
-    })
-    .catch(err => {
-        console.error('Connection error', err);
-        process.exit();
-    });
+mongoose
+  .connect(MONGO_URI)
+  .then(() => {
+    console.log('Successfully connected to MongoDB.');
+  })
+  .catch((err) => {
+    console.error('Connection error', err);
+    process.exit();
+  });
 
 app.get('/', (req, res) => {
-    res.json({ message: 'Welcome to the StackIt API.' });
+  res.json({ message: 'Welcome to the StackIt API.' });
 });
 
 // Use routes
@@ -36,5 +37,5 @@ app.use('/api/auth', authRoutes);
 app.use('/api/stacks', stackRoutes);
 
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`)
+  console.log(`Server is running on http://localhost:${PORT}`);
 });

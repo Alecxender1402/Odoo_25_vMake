@@ -8,6 +8,7 @@ import morgan from 'morgan';
 /* --- IMPORT MODULES --- */
 import authRoutes from './routes/auth.routes.js';
 import stackRoutes from './routes/stack.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 
 /* --- SET ENV --- */
 dotenv.config();
@@ -35,6 +36,7 @@ mongoose
 /* --- USE ROUTES --- */
 app.use('/api/auth', authRoutes);
 app.use('/api/stacks', stackRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 /* --- START SERVER --- */
 app.listen(PORT, () => {

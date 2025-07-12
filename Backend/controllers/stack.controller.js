@@ -1,5 +1,5 @@
 import { Stack } from '../models/Stack.js';
-import { Vote } from '../models/StackVote.js';
+import { StackVote } from '../models/StackVote.js';
 import { Comment } from '../models/Comment.js';
 import { CommentVote } from '../models/CommentVote.js';
 
@@ -140,11 +140,11 @@ export const voteOnStack = async (req, res) => {
       return res.status(404).json({ message: 'Stack not found.' });
     }
 
-    const existingVote = await Vote.findOne({ user: userId, stack: stackId });
+    const existingVote = await StackVote.findOne({ user: userId, stack: stackId });
 
     if (existingVote) {
       if (existingVote.type === type) {
-        await Vote.findByIdAndDelete(existingVote._id);
+        await StackVote.findByIdAndDelete(existingVote._id);
         if (type === 'up') stack.upvotes -= 1;
         else stack.downvotes -= 1;
       } else {
@@ -158,7 +158,7 @@ export const voteOnStack = async (req, res) => {
         await existingVote.save();
       }
     } else {
-      await Vote.create({ user: userId, stack: stackId, type });
+      await StackVote.create({ user: userId, stack: stackId, type });
       if (type === 'up') stack.upvotes += 1;
       else stack.downvotes += 1;
     }

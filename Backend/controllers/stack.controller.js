@@ -2,6 +2,7 @@ import { Stack } from '../models/Stack.js';
 import { StackVote } from '../models/StackVote.js';
 import { Comment } from '../models/Comment.js';
 import { CommentVote } from '../models/CommentVote.js';
+import { checkTagRelevancy } from '../services/ai.service.js';
 
 // @desc    Get all stacks with filtering and sorting
 // @route   GET /api/stacks
@@ -66,6 +67,15 @@ export const getStackById = async (req, res) => {
 export const createStack = async (req, res) => {
   try {
     const { title, description, tags } = req.body;
+
+    const isRelevant = await checkTagRelevancy(title, description, tags);
+    if (!isRelevant) {
+      return res.status(400).json({
+        message:
+          'The provided tags seem irrelevant to the content. Please review your tags or description.',
+      });
+    }
+
     const newStack = new Stack({
       title,
       description,

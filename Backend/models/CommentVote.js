@@ -25,6 +25,7 @@ const commentVoteSchema = new Schema(
   }
 );
 
+// Ensure a user can only vote once per comment
 commentVoteSchema.index({ user: 1, comment: 1 }, { unique: true });
 
 export const CommentVote = mongoose.models.CommentVote || model('CommentVote', commentVoteSchema);

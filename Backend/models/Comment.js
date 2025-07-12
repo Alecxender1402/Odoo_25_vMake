@@ -6,8 +6,10 @@ const commentSchema = new Schema(
   {
     text: {
       type: String,
-      required: [true, 'Comment text cannot be empty.'],
+      required: [true, 'Comment text is required.'],
       trim: true,
+      minlength: [1, 'Comment must be at least 1 character long.'],
+      maxlength: [5000, 'Comment cannot be more than 5000 characters long.'],
     },
     author: {
       type: Schema.Types.ObjectId,
@@ -40,5 +42,9 @@ const commentSchema = new Schema(
     timestamps: true,
   }
 );
+
+// Index for better query performance
+commentSchema.index({ stack: 1, createdAt: -1 });
+commentSchema.index({ author: 1 });
 
 export const Comment = mongoose.models.Comment || model('Comment', commentSchema);

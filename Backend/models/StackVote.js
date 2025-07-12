@@ -25,6 +25,7 @@ const stackVoteSchema = new Schema(
   }
 );
 
+// Ensure a user can only vote once per stack
 stackVoteSchema.index({ user: 1, stack: 1 }, { unique: true });
 
 export const StackVote = mongoose.models.StackVote || model('StackVote', stackVoteSchema);

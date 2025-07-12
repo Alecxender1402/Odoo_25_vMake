@@ -29,8 +29,15 @@ export const deleteStackAdmin = async (req, res) => {
     const stack = await Stack.findById(id);
     if (!stack) return res.status(404).json({ message: 'Stack not found.' });
 
+    // Delete all comments and their votes
     await Comment.deleteMany({ _id: { $in: stack.comments } });
     await StackVote.deleteMany({ stack: id });
+    
+    // Delete all comment votes for comments in this stack
+    const commentIds = stack.comments;
+    await CommentVote.deleteMany({ comment: { $in: commentIds } });
+    
+    // Delete the stack
     await Stack.findByIdAndDelete(id);
 
     await logAdminAction(req.userId, 'delete_stack', { targetStack: id, reason: 'Admin deletion' });
@@ -77,25 +84,31 @@ export const listUsers = async (req, res) => {
   }
 };
 
-// @desc    Update a user's role
-// @route   PATCH /api/admin/users/:userId/role
+// @desc    Promote user to admin
+// @route   PATCH /api/admin/users/:userId/promote
 // @access  Admin
-export const updateUserRole = async (req, res) => {
+export const promoteToAdmin = async (req, res) => {
   try {
-    const { role } = req.body;
-    if (!['User', 'Admin'].includes(role)) {
-      return res.status(400).json({ message: 'Invalid role specified.' });
-    }
-    const user = await User.findByIdAndUpdate(req.params.userId, { role }, { new: true }).select(
-      '-password'
-    );
+    const { userId } = req.params;
+    const { makeAdmin } = req.body;
+    
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { role: makeAdmin ? 'admin' : 'user' },
+      { new: true }
+    ).select('-password');
+    
     if (!user) return res.status(404).json({ message: 'User not found.' });
 
-    await logAdminAction(req.userId, 'update_user_role', {
+    await logAdminAction(req.userId, 'promote_user', {
       targetUser: user._id,
-      reason: `Set role to ${role}`,
+      reason: makeAdmin ? 'Promoted to admin' : 'Demoted to user',
     });
-    res.status(200).json(user);
+    
+    res.status(200).json({ 
+      message: `User ${makeAdmin ? 'promoted to admin' : 'demoted to user'} successfully.`,
+      user 
+    });
   } catch (error) {
     res.status(500).json({ message: 'Something went wrong.', error: error.message });
   }

@@ -1,21 +1,7 @@
 import React from 'react';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MoreHorizontal } from "lucide-react";
 
 interface PaginationControlsProps {
   currentPage: number;
@@ -29,14 +15,12 @@ interface PaginationControlsProps {
   onPageChange: (page: number) => void;
   onNextPage: () => void;
   onPreviousPage: () => void;
-  onItemsPerPageChange: (limit: number) => void;
-  showItemsPerPageSelector?: boolean;
+  onItemsPerPageChange: (itemsPerPage: number) => void;
   itemsPerPageOptions?: number[];
-  showInfo?: boolean;
-  className?: string;
+  showSummary?: boolean;
 }
 
-export const PaginationControls: React.FC<PaginationControlsProps> = ({
+export const PaginationControls = ({
   currentPage,
   totalPages,
   totalItems,
@@ -49,94 +33,104 @@ export const PaginationControls: React.FC<PaginationControlsProps> = ({
   onNextPage,
   onPreviousPage,
   onItemsPerPageChange,
-  showItemsPerPageSelector = true,
   itemsPerPageOptions = [5, 10, 20, 50],
-  showInfo = true,
-  className = "",
-}) => {
-  // Generate page numbers to display
+  showSummary = true
+}: PaginationControlsProps) => {
+  
+  // Generate page numbers to show
   const getPageNumbers = () => {
-    const delta = 2; // Number of pages to show on each side of current page
-    const pages: (number | 'ellipsis')[] = [];
-    const rangeStart = Math.max(2, currentPage - delta);
-    const rangeEnd = Math.min(totalPages - 1, currentPage + delta);
-
-    if (totalPages <= 1) return [1];
-
-    // Always show first page
-    pages.push(1);
-
-    // Add ellipsis if there's a gap after first page
-    if (rangeStart > 2) {
-      pages.push('ellipsis');
-    }
-
-    // Add pages around current page
-    for (let i = rangeStart; i <= rangeEnd; i++) {
-      if (i !== 1 && i !== totalPages) {
+    const pages = [];
+    const maxVisiblePages = 7;
+    
+    if (totalPages <= maxVisiblePages) {
+      // Show all pages if total is small
+      for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
+    } else {
+      // Smart pagination with ellipsis
+      if (currentPage <= 4) {
+        // Show first 5 pages, then ellipsis, then last page
+        for (let i = 1; i <= 5; i++) {
+          pages.push(i);
+        }
+        if (totalPages > 6) {
+          pages.push('ellipsis1');
+          pages.push(totalPages);
+        }
+      } else if (currentPage >= totalPages - 3) {
+        // Show first page, ellipsis, then last 5 pages
+        pages.push(1);
+        if (totalPages > 6) {
+          pages.push('ellipsis1');
+        }
+        for (let i = totalPages - 4; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        // Show first page, ellipsis, current-1, current, current+1, ellipsis, last page
+        pages.push(1);
+        pages.push('ellipsis1');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pages.push(i);
+        }
+        pages.push('ellipsis2');
+        pages.push(totalPages);
+      }
     }
-
-    // Add ellipsis if there's a gap before last page
-    if (rangeEnd < totalPages - 1) {
-      pages.push('ellipsis');
-    }
-
-    // Always show last page (if more than 1 page total)
-    if (totalPages > 1) {
-      pages.push(totalPages);
-    }
-
+    
     return pages;
   };
 
+  const pageNumbers = getPageNumbers();
+
   if (totalPages <= 1) {
-    return showInfo ? (
-      <div className={`flex items-center justify-between ${className}`}>
+    return showSummary ? (
+      <div className="flex items-center justify-between py-4">
         <div className="text-sm text-muted-foreground">
-          Showing {totalItems} of {totalItems} items
+          Showing {totalItems} {totalItems === 1 ? 'item' : 'items'}
         </div>
-        {showItemsPerPageSelector && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Items per page:</span>
-            <Select value={itemsPerPage.toString()} onValueChange={(value) => onItemsPerPageChange(Number(value))}>
-              <SelectTrigger className="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {itemsPerPageOptions.map((option) => (
-                  <SelectItem key={option} value={option.toString()}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-muted-foreground">Items per page:</span>
+          <Select 
+            value={itemsPerPage.toString()} 
+            onValueChange={(value) => onItemsPerPageChange(Number(value))}
+          >
+            <SelectTrigger className="w-20 h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {itemsPerPageOptions.map(option => (
+                <SelectItem key={option} value={option.toString()}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
     ) : null;
   }
 
   return (
-    <div className={`space-y-4 ${className}`}>
-      {/* Info and Items Per Page Selector */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        {showInfo && (
-          <div className="text-sm text-muted-foreground">
-            Showing {startIndex} to {endIndex} of {totalItems} items
+    <div className="flex flex-col space-y-4 py-4 border-t bg-background">
+      {/* Summary */}
+      {showSummary && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <div>
+            Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} items
           </div>
-        )}
-        
-        {showItemsPerPageSelector && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Items per page:</span>
-            <Select value={itemsPerPage.toString()} onValueChange={(value) => onItemsPerPageChange(Number(value))}>
-              <SelectTrigger className="w-20">
+          <div className="flex items-center space-x-2">
+            <span>Items per page:</span>
+            <Select 
+              value={itemsPerPage.toString()} 
+              onValueChange={(value) => onItemsPerPageChange(Number(value))}
+            >
+              <SelectTrigger className="w-20 h-8">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {itemsPerPageOptions.map((option) => (
+                {itemsPerPageOptions.map(option => (
                   <SelectItem key={option} value={option.toString()}>
                     {option}
                   </SelectItem>
@@ -144,79 +138,86 @@ export const PaginationControls: React.FC<PaginationControlsProps> = ({
               </SelectContent>
             </Select>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Pagination Navigation */}
-      <Pagination>
-        <PaginationContent>
-          <PaginationItem>
-            <PaginationPrevious 
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                onPreviousPage();
-              }}
-              className={!hasPreviousPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-            />
-          </PaginationItem>
-          
-          {getPageNumbers().map((page, index) => (
-            <PaginationItem key={index}>
-              {page === 'ellipsis' ? (
-                <PaginationEllipsis />
-              ) : (
-                <PaginationLink
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onPageChange(page);
-                  }}
-                  isActive={currentPage === page}
-                  className="cursor-pointer"
-                >
-                  {page}
-                </PaginationLink>
-              )}
-            </PaginationItem>
-          ))}
-          
-          <PaginationItem>
-            <PaginationNext
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                onNextPage();
-              }}
-              className={!hasNextPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-            />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+      {/* Pagination Controls */}
+      <div className="flex items-center justify-center space-x-1">
+        {/* First Page */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(1)}
+          disabled={!hasPreviousPage}
+          className="hidden sm:flex"
+        >
+          <ChevronsLeft className="h-4 w-4" />
+        </Button>
 
-      {/* Mobile Quick Navigation */}
-      <div className="flex sm:hidden items-center justify-center gap-2">
+        {/* Previous Page */}
         <Button
           variant="outline"
           size="sm"
           onClick={onPreviousPage}
           disabled={!hasPreviousPage}
         >
-          Previous
+          <ChevronLeft className="h-4 w-4" />
+          <span className="hidden sm:inline ml-1">Previous</span>
         </Button>
-        
-        <span className="text-sm text-muted-foreground px-2">
-          {currentPage} of {totalPages}
-        </span>
-        
+
+        {/* Page Numbers */}
+        <div className="flex items-center space-x-1">
+          {pageNumbers.map((pageNum, index) => {
+            if (typeof pageNum === 'string') {
+              return (
+                <div key={pageNum} className="px-2">
+                  <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                </div>
+              );
+            }
+
+            return (
+              <Button
+                key={pageNum}
+                variant={currentPage === pageNum ? "default" : "outline"}
+                size="sm"
+                onClick={() => onPageChange(pageNum)}
+                className="min-w-[2.5rem]"
+              >
+                {pageNum}
+              </Button>
+            );
+          })}
+        </div>
+
+        {/* Next Page */}
         <Button
           variant="outline"
           size="sm"
           onClick={onNextPage}
           disabled={!hasNextPage}
         >
-          Next
+          <span className="hidden sm:inline mr-1">Next</span>
+          <ChevronRight className="h-4 w-4" />
         </Button>
+
+        {/* Last Page */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(totalPages)}
+          disabled={!hasNextPage}
+          className="hidden sm:flex"
+        >
+          <ChevronsRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Mobile Page Info */}
+      <div className="flex justify-center sm:hidden">
+        <span className="text-sm text-muted-foreground">
+          Page {currentPage} of {totalPages}
+        </span>
       </div>
     </div>
   );

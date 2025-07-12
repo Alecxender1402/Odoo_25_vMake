@@ -11,41 +11,45 @@ const geminiConfig = {
 
 const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', geminiConfig });
 
+// Simple tag relevancy check service
+// This is a placeholder for AI-powered tag suggestions
+
 export const checkTagRelevancy = async (title, description, tags) => {
-  console.log('--- CALLING GEMINI AI FOR RELEVANCY CHECK ---');
-
-  const tagList = tags.join(', ');
-  const prompt = `
-    Analyze the following code-related description and the provided tags. Your task is to determine if the tags accurately represent the main topics or technologies in the description.
-
-    Title: "${title}"
-    Description: "${description}"
-    Tags: [${tagList}]
-
-    Respond with only the word "true" if the tags are relevant, or "false" if they are not. Do not provide any explanation.
-  `;
-
-  try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text().trim().toLowerCase();
-
-    console.log(`Gemini AI Raw Response: "${text}"`);
-
-    if (text === 'true') {
-      console.log('AI Check Result: Relevant');
-      return true;
+  // For now, this is a simple implementation
+  // In a real application, this could use AI/ML to suggest relevant tags
+  
+  const titleWords = title.toLowerCase().split(' ');
+  const descWords = description.toLowerCase().split(' ');
+  const allWords = [...titleWords, ...descWords];
+  
+  // Simple keyword matching for common technologies
+  const suggestions = [];
+  
+  const techKeywords = {
+    'JavaScript': ['javascript', 'js', 'node', 'npm', 'yarn'],
+    'React': ['react', 'jsx', 'component', 'hook', 'state'],
+    'Node.js': ['node', 'nodejs', 'express', 'server', 'backend'],
+    'Python': ['python', 'py', 'django', 'flask', 'pip'],
+    'CSS': ['css', 'style', 'styling', 'layout', 'flexbox', 'grid'],
+    'HTML': ['html', 'dom', 'element', 'tag', 'markup'],
+    'MongoDB': ['mongo', 'mongodb', 'database', 'collection', 'document'],
+    'SQL': ['sql', 'database', 'query', 'table', 'join'],
+    'Docker': ['docker', 'container', 'dockerfile', 'image'],
+    'AWS': ['aws', 'amazon', 'cloud', 'ec2', 's3', 'lambda']
+  };
+  
+  for (const [tech, keywords] of Object.entries(techKeywords)) {
+    const hasKeyword = keywords.some(keyword => 
+      allWords.some(word => word.includes(keyword))
+    );
+    
+    if (hasKeyword && !tags.includes(tech)) {
+      suggestions.push(tech);
     }
-    if (text === 'false') {
-      console.log('AI Check Result: Not Relevant');
-      return false;
-    }
-
-    console.warn('AI gave an unexpected response. Defaulting to relevant.');
-    return true;
-  } catch (error) {
-    console.error('Error calling Gemini AI:', error.message);
-
-    return true;
   }
+  
+  return {
+    suggestions: suggestions.slice(0, 3), // Limit to 3 suggestions
+    relevancyScore: Math.min(suggestions.length / 3, 1) // Simple relevancy score
+  };
 };

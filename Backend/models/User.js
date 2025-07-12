@@ -10,6 +10,7 @@ const userSchema = new Schema(
       unique: true,
       trim: true,
       minlength: [3, 'Username must be at least 3 characters long.'],
+      maxlength: [30, 'Username cannot be more than 30 characters long.'],
     },
     email: {
       type: String,
@@ -17,7 +18,7 @@ const userSchema = new Schema(
       unique: true,
       trim: true,
       lowercase: true,
-      match: [/.+@.+\..+/, 'Please enter a valid email address.'],
+      match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email address.'],
     },
     password: {
       type: String,
@@ -26,8 +27,12 @@ const userSchema = new Schema(
     },
     role: {
       type: String,
-      enum: ['User', 'Admin'],
-      default: 'User',
+      enum: ['user', 'admin'],
+      default: 'user',
+    },
+    reputation: {
+      type: Number,
+      default: 0,
     },
     isSuspended: {
       type: Boolean,

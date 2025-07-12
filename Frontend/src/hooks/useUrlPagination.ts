@@ -1,112 +1,87 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { usePagination } from './usePagination';
 
-export interface UrlPaginationConfig {
-  pageParam?: string;
-  limitParam?: string;
+interface UseUrlPaginationOptions {
   defaultPage?: number;
   defaultLimit?: number;
 }
 
-export interface UrlPaginationResult<T> {
-  data: T[];
-  pagination: {
-    currentPage: number;
-    totalPages: number;
-    totalItems: number;
-    itemsPerPage: number;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
-    startIndex: number;
-    endIndex: number;
-  };
-  goToPage: (page: number) => void;
-  goToNextPage: () => void;
-  goToPreviousPage: () => void;
-  changeItemsPerPage: (limit: number) => void;
-}
-
-/**
- * Enhanced pagination hook that synchronizes with URL parameters
- * This allows users to bookmark pages and share URLs with specific pagination states
- */
-export function useUrlPagination<T>(
-  items: T[],
-  config: UrlPaginationConfig = {}
-): UrlPaginationResult<T> {
-  const {
-    pageParam = 'page',
-    limitParam = 'limit',
-    defaultPage = 1,
-    defaultLimit = 10
-  } = config;
-
+export const useUrlPagination = <T>(
+  data: T[],
+  options: UseUrlPaginationOptions = {}
+) => {
+  const { defaultPage = 1, defaultLimit = 10 } = options;
   const [searchParams, setSearchParams] = useSearchParams();
   
-  // Get initial values from URL or use defaults
-  const currentPage = parseInt(searchParams.get(pageParam) || defaultPage.toString());
-  const itemsPerPage = parseInt(searchParams.get(limitParam) || defaultLimit.toString());
+  const pageParam = searchParams.get('page');
+  const limitParam = searchParams.get('limit');
+  
+  const initialPage = pageParam ? parseInt(pageParam, 10) : defaultPage;
+  const initialLimit = limitParam ? parseInt(limitParam, 10) : defaultLimit;
+  
+  const {
+    data: paginatedData,
+    pagination,
+    goToPage: originalGoToPage,
+    goToNextPage: originalGoToNextPage,
+    goToPreviousPage: originalGoToPreviousPage,
+    goToFirstPage: originalGoToFirstPage,
+    goToLastPage: originalGoToLastPage,
+    changeItemsPerPage: originalChangeItemsPerPage,
+  } = usePagination(data, initialPage, initialLimit);
 
-  const paginatedData = useMemo(() => {
-    const totalItems = items.length;
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
-    const validCurrentPage = Math.max(1, Math.min(currentPage, totalPages || 1));
-    const startIndex = (validCurrentPage - 1) * itemsPerPage;
-    const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-    const data = items.slice(startIndex, endIndex);
-
-    return {
-      data,
-      pagination: {
-        currentPage: validCurrentPage,
-        totalPages,
-        totalItems,
-        itemsPerPage,
-        hasNextPage: validCurrentPage < totalPages,
-        hasPreviousPage: validCurrentPage > 1,
-        startIndex: startIndex + 1,
-        endIndex,
-      },
-    };
-  }, [items, currentPage, itemsPerPage]);
-
-  const updateUrlParams = (newPage: number, newLimit?: number) => {
-    const params = new URLSearchParams(searchParams);
-    params.set(pageParam, newPage.toString());
-    if (newLimit !== undefined) {
-      params.set(limitParam, newLimit.toString());
-    }
-    setSearchParams(params);
+  const updateUrl = (page: number, limit: number) => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('page', page.toString());
+    newParams.set('limit', limit.toString());
+    setSearchParams(newParams);
   };
 
   const goToPage = (page: number) => {
-    const totalPages = Math.ceil(items.length / itemsPerPage);
-    if (page >= 1 && page <= totalPages) {
-      updateUrlParams(page);
-    }
+    originalGoToPage(page);
+    updateUrl(page, pagination.itemsPerPage);
   };
 
   const goToNextPage = () => {
-    if (paginatedData.pagination.hasNextPage) {
-      updateUrlParams(currentPage + 1);
+    const nextPage = pagination.currentPage + 1;
+    if (nextPage <= pagination.totalPages) {
+      originalGoToNextPage();
+      updateUrl(nextPage, pagination.itemsPerPage);
     }
   };
 
   const goToPreviousPage = () => {
-    if (paginatedData.pagination.hasPreviousPage) {
-      updateUrlParams(currentPage - 1);
+    const prevPage = pagination.currentPage - 1;
+    if (prevPage >= 1) {
+      originalGoToPreviousPage();
+      updateUrl(prevPage, pagination.itemsPerPage);
     }
   };
 
-  const changeItemsPerPage = (limit: number) => {
-    updateUrlParams(1, limit); // Reset to first page when changing items per page
+  const goToFirstPage = () => {
+    originalGoToFirstPage();
+    updateUrl(1, pagination.itemsPerPage);
+  };
+
+  const goToLastPage = () => {
+    originalGoToLastPage();
+    updateUrl(pagination.totalPages, pagination.itemsPerPage);
+  };
+
+  const changeItemsPerPage = (newItemsPerPage: number) => {
+    originalChangeItemsPerPage(newItemsPerPage);
+    updateUrl(1, newItemsPerPage);
   };
 
   return {
-    ...paginatedData,
+    data: paginatedData,
+    pagination,
     goToPage,
     goToNextPage,
     goToPreviousPage,
+    goToFirstPage,
+    goToLastPage,
     changeItemsPerPage,
   };
-}
+};

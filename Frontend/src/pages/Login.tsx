@@ -5,20 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { User } from "@/components/layout/Header";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { apiClient } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface LoginPageProps {
-  onLogin: (user: User) => void;
+  onLogin: (user: User, token?: string) => void;
 }
-
-// Dummy users for testing
-const dummyUsers = [
-  { username: "john_doe", password: "password123", role: "user" as const },
-  { username: "jane_admin", password: "admin123", role: "admin" as const },
-  { username: "test_user", password: "test123", role: "user" as const },
-];
 
 export const Login = ({ onLogin }: LoginPageProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const isAdminMode = searchParams.get('mode') === 'admin';
   const [isSignUp, setIsSignUp] = useState(false);
@@ -38,7 +34,7 @@ export const Login = ({ onLogin }: LoginPageProps) => {
     if (isAdminMode && !isSignUp) {
       setFormData(prev => ({
         ...prev,
-        username: 'jane_admin',
+        email: 'admin@stackit.com',
         password: 'admin123'
       }));
     }
@@ -57,43 +53,63 @@ export const Login = ({ onLogin }: LoginPageProps) => {
     setError('');
     setIsLoading(true);
 
-    // Simulate loading
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      if (isSignUp) {
+        // Sign up logic
+        if (formData.password !== formData.confirmPassword) {
+          setError('Passwords do not match');
+          setIsLoading(false);
+          return;
+        }
+        
+        if (formData.username.trim() === '' || formData.password.trim() === '' || formData.email.trim() === '') {
+          setError('All fields are required');
+          setIsLoading(false);
+          return;
+        }
+        
+        await apiClient.register({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password
+        });
 
-    if (isSignUp) {
-      // Sign up logic
-      if (formData.password !== formData.confirmPassword) {
-        setError('Passwords do not match');
-        setIsLoading(false);
-        return;
-      }
-      if (formData.username.trim() === '' || formData.password.trim() === '' || formData.email.trim() === '') {
-        setError('All fields are required');
-        setIsLoading(false);
-        return;
-      }
-      
-      // For demo purposes, create a new user
-      const newUser: User = {
-        username: formData.username,
-        role: 'user'
-      };
-      onLogin(newUser);
-      navigate('/');
-    } else {
-      // Sign in logic
-      const user = dummyUsers.find(
-        u => u.username === formData.username && u.password === formData.password
-      );
-      
-      if (user) {
-        onLogin({ username: user.username, role: user.role });
-        navigate('/');
+        toast({
+          title: "Registration Successful!",
+          description: "Please login with your credentials.",
+        });
+
+        setIsSignUp(false);
+        resetForm();
       } else {
-        setError('Invalid username or password');
+        // Sign in logic
+        const response = await apiClient.login({
+          email: formData.email,
+          password: formData.password
+        });
+        
+        // Store the token
+        localStorage.setItem('token', response.token);
+        
+        // Call onLogin with user data and token
+        onLogin({ 
+          username: response.user.username, 
+          role: response.user.role || 'user' 
+        }, response.token);
+        
+        toast({
+          title: "Login Successful!",
+          description: `Welcome back, ${response.user.username}!`,
+        });
+        
+        navigate('/');
       }
+    } catch (error: any) {
+      console.error('Login/Register error:', error);
+      setError(error.message || 'An error occurred');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const resetForm = () => {
@@ -150,68 +166,36 @@ export const Login = ({ onLogin }: LoginPageProps) => {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            {/* Demo Credentials for Sign In */}
-            {!isSignUp && (
-              <div className={`p-4 rounded-lg border ${isAdminMode ? 'bg-orange-50 border-orange-200' : 'bg-blue-50 border-blue-200'}`}>
-                <p className={`text-sm font-medium mb-3 ${isAdminMode ? 'text-orange-800' : 'text-blue-800'}`}>
-                  {isAdminMode ? '🔐 Admin Mode - Credentials Pre-filled:' : '🎯 Demo Credentials:'}
-                </p>
-                {isAdminMode ? (
-                  <div className="text-xs text-orange-700 space-y-2">
-                    <div className="flex justify-between">
-                      <span className="font-medium">Admin:</span>
-                      <span>jane_admin / admin123</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-xs text-blue-700 space-y-2">
-                    <div className="flex justify-between">
-                      <span className="font-medium">User:</span>
-                      <span>john_doe / password123</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">Admin:</span>
-                      <span>jane_admin / admin123</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">Test:</span>
-                      <span>test_user / test123</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Username */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Username</label>
-                <Input
-                  type="text"
-                  name="username"
-                  placeholder="Enter your username"
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  required
-                  className="h-11 border-gray-300 focus:border-primary focus:ring-primary"
-                />
-              </div>
-
-              {/* Email (Sign Up only) */}
+              {/* Username (Sign Up only) */}
               {isSignUp && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Email</label>
+                  <label className="text-sm font-medium text-gray-700">Username</label>
                   <Input
-                    type="email"
-                    name="email"
-                    placeholder="Enter your email"
-                    value={formData.email}
+                    type="text"
+                    name="username"
+                    placeholder="Enter your username"
+                    value={formData.username}
                     onChange={handleInputChange}
                     required
                     className="h-11 border-gray-300 focus:border-primary focus:ring-primary"
                   />
                 </div>
               )}
+
+              {/* Email */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Email</label>
+                <Input
+                  type="email"
+                  name="email"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  required
+                  className="h-11 border-gray-300 focus:border-primary focus:ring-primary"
+                />
+              </div>
 
               {/* Password */}
               <div className="space-y-2">
@@ -291,22 +275,25 @@ export const Login = ({ onLogin }: LoginPageProps) => {
                 <p className="text-sm text-gray-600">
                   {isSignUp ? 'Already have an account?' : "Don't have an account?"}
                   <button
-                    type="button"
                     onClick={toggleMode}
-                    className="ml-2 text-primary hover:text-primary-hover font-medium hover:underline transition-colors"
+                    className="ml-1 text-primary hover:text-primary-hover font-medium transition-colors"
                   >
                     {isSignUp ? 'Sign In' : 'Sign Up'}
                   </button>
                 </p>
               </div>
             )}
+
+            {/* Admin Mode Indicator */}
+            {isAdminMode && (
+              <div className="text-center pt-4 border-t border-gray-200">
+                <p className="text-xs text-gray-500">
+                  Admin Mode • Use: admin@stackit.com / admin123
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
-
-        {/* Footer */}
-        <div className="text-center mt-8 text-sm text-gray-500">
-          <p>© 2025 StackIt. All rights reserved.</p>
-        </div>
       </div>
     </div>
   );

@@ -16,17 +16,27 @@ const notificationSchema = new Schema(
     },
     type: {
       type: String,
-      enum: ['new_answer', 'new_comment', 'mention'],
+      enum: [
+        'stack_vote',
+        'comment_vote', 
+        'new_comment',
+        'comment_accepted',
+        'stack_mentioned',
+        'user_mentioned'
+      ],
       required: true,
     },
     stack: {
       type: Schema.Types.ObjectId,
       ref: 'Stack',
-      required: true,
     },
     comment: {
       type: Schema.Types.ObjectId,
       ref: 'Comment',
+    },
+    message: {
+      type: String,
+      required: true,
     },
     isRead: {
       type: Boolean,
@@ -38,4 +48,8 @@ const notificationSchema = new Schema(
   }
 );
 
-export const Notification = model('Notification', notificationSchema);
+// Index for better query performance
+notificationSchema.index({ recipient: 1, createdAt: -1 });
+notificationSchema.index({ isRead: 1 });
+
+export const Notification = mongoose.models.Notification || model('Notification', notificationSchema);

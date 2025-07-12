@@ -1,26 +1,34 @@
 import express from 'express';
-import {
-  getAllStacks,
-  getStackById,
-  createStack,
-  voteOnStack,
-  addComment,
+import { 
+  createStack, 
+  getAllStacks, 
+  getStackById, 
+  updateStack, 
+  deleteStack,
+  getComments,
+  createComment,
+  getAvailableTags,
   markAsSolution,
-  voteOnComment,
+  voteOnStack,
+  voteOnComment
 } from '../controllers/stack.controller.js';
-import { verifyToken } from '../middlewares/auth.middleware.js';
+import { authenticateToken, optionalAuth } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
-/* --- PUBLIC ROUTES --- */
-router.get('/', getAllStacks);
-router.get('/:id', getStackById);
+// Public routes (no authentication required)
+router.get('/', optionalAuth, getAllStacks);
+router.get('/tags', getAvailableTags);
+router.get('/:id', optionalAuth, getStackById);
+router.get('/:id/comments', optionalAuth, getComments);
 
-/* --- PRIVATE ROUTES --- */
-router.post('/', verifyToken, createStack);
-router.post('/:id/vote', verifyToken, voteOnStack);
-router.post('/:id/comments', verifyToken, addComment);
-router.post('/:id/solution', verifyToken, markAsSolution);
-router.post('/:id/comment/vote', verifyToken, voteOnComment);
+// Protected routes (authentication required)
+router.post('/', authenticateToken, createStack);
+router.put('/:id', authenticateToken, updateStack);
+router.delete('/:id', authenticateToken, deleteStack);
+router.post('/:id/comments', authenticateToken, createComment);
+router.post('/:stackId/comments/:commentId/solution', authenticateToken, markAsSolution);
+router.post('/:id/vote', authenticateToken, voteOnStack);
+router.post('/:stackId/comments/:commentId/vote', authenticateToken, voteOnComment);
 
 export default router;

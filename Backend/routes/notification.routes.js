@@ -3,11 +3,11 @@ import {
   getNotifications,
   markNotificationsAsRead,
 } from '../controllers/notification.controller.js';
-import { verifyToken } from '../middlewares/auth.middleware.js';
+import { authenticateToken } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
-router.get('/', verifyToken, getNotifications);
-router.post('/read', verifyToken, markNotificationsAsRead);
+router.get('/', authenticateToken, getNotifications);
+router.post('/read', authenticateToken, markNotificationsAsRead);
 
 export default router;

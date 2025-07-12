@@ -1,36 +1,34 @@
 import express from 'express';
-import { verifyToken } from '../middlewares/auth.middleware.js';
-import { isAdmin } from '../middlewares/admin.middleware.js';
 import {
-  getAllStacksAdmin,
   deleteStackAdmin,
-  deleteCommentAdmin,
+  getAllStacksAdmin,
   listUsers,
-  updateUserRole,
   updateUserStatus,
-  lockStack,
-  pinStack,
+  promoteToAdmin,
   getModerationLogs,
+  lockStack,
+  pinStack
 } from '../controllers/admin.controller.js';
+import { authenticateToken, isAdmin } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
-// Apply admin middleware to all routes in this file
-router.use(verifyToken, isAdmin);
+// All admin routes require authentication and admin role
+router.use(authenticateToken);
+router.use(isAdmin);
 
-/* --- CONTENT MANAGEMENT --- */
+// Stack management
 router.get('/stacks', getAllStacksAdmin);
 router.delete('/stacks/:id', deleteStackAdmin);
-router.delete('/comments/:id', deleteCommentAdmin);
 router.patch('/stacks/:stackId/lock', lockStack);
 router.patch('/stacks/:stackId/pin', pinStack);
 
-/* --- USER MANAGEMENT --- */
+// User management
 router.get('/users', listUsers);
-router.patch('/users/:userId/role', updateUserRole);
 router.patch('/users/:userId/status', updateUserStatus);
+router.patch('/users/:userId/promote', promoteToAdmin);
 
-/* --- LOGS --- */
+// Logs
 router.get('/logs', getModerationLogs);
 
 export default router;

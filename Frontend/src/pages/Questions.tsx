@@ -1,16 +1,17 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { Header, User } from "@/components/layout/Header";
 import { QuestionList } from "@/components/questions/QuestionList";
+import { FilterSidebar } from "@/components/sidebar/FilterSidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PaginationControls } from "@/components/ui/pagination-controls";
-import { Plus, Search, Filter, TrendingUp, Clock } from "lucide-react";
+import { Footer } from "@/components/layout/Footer";
+import { usePagination } from "@/hooks/usePagination";
+import { Plus, Search, Filter, TrendingUp, Clock, MessageSquare } from "lucide-react";
 import AskQuestionModal from "@/components/layout/AskQuestionModal";
 import { useToast } from "@/hooks/use-toast";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { useUrlPagination } from "@/hooks/useUrlPagination";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 interface QuestionsProps {
   currentUser: User;
@@ -18,73 +19,62 @@ interface QuestionsProps {
   questions: any[];
   onAddQuestion: (question: any) => void;
   onVote: (questionId: string, voteType: 'up' | 'down') => void;
-  onDeleteQuestion?: (questionId: string) => void;
+  onDeleteQuestion: (questionId: string) => void;
 }
 
-const Questions = ({ currentUser, onLogin, questions, onAddQuestion, onVote, onDeleteQuestion }: QuestionsProps) => {
+const Questions = ({ 
+  currentUser, 
+  onLogin, 
+  questions, 
+  onAddQuestion, 
+  onVote, 
+  onDeleteQuestion 
+}: QuestionsProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isAskModalOpen, setIsAskModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTag, setSelectedTag] = useState("all");
-  const [sortBy, setSortBy] = useState("newest");
-
-  // Initialize search and tag from URL params
-  useEffect(() => {
-    const tagFromUrl = searchParams.get('tag');
-    const searchFromUrl = searchParams.get('search');
-    if (tagFromUrl) {
-      setSelectedTag(tagFromUrl);
-    }
-    if (searchFromUrl) {
-      setSearchTerm(searchFromUrl);
-    }
-  }, [searchParams]);
-
-  // Get all unique tags from questions
-  const allTags = useMemo(() => {
-    const tags = new Set<string>();
-    questions.forEach(question => {
-      question.tags?.forEach((tag: string) => tags.add(tag));
-    });
-    return Array.from(tags).sort();
-  }, [questions]);
-
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+  const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'newest');
+  const [selectedTag, setSelectedTag] = useState(searchParams.get('tag') || '');
+  
   // Filter and sort questions
-  const filteredQuestions = useMemo(() => {
+  const filteredAndSortedQuestions = useMemo(() => {
     let filtered = questions;
 
     // Filter by search term
     if (searchTerm) {
-      filtered = filtered.filter(question =>
-        question.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        question.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        question.tags?.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+      filtered = filtered.filter(q => 
+        q.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        q.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        q.tags.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
-    // Filter by tag
-    if (selectedTag !== "all") {
-      filtered = filtered.filter(question =>
-        question.tags?.includes(selectedTag)
+    // Filter by selected tag
+    if (selectedTag) {
+      filtered = filtered.filter(q => 
+        q.tags.some((tag: string) => tag.toLowerCase() === selectedTag.toLowerCase())
       );
     }
 
     // Sort questions
     switch (sortBy) {
-      case "newest":
-        return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      case "oldest":
-        return filtered.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-      case "votes":
-        return filtered.sort((a, b) => b.votes - a.votes);
+      case 'popular':
+        return filtered.sort((a, b) => (b.votes || 0) - (a.votes || 0));
+      case 'unanswered':
+        return filtered.filter(q => (q.answers || 0) === 0).sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      case 'newest':
       default:
-        return filtered;
+        return filtered.sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
     }
-  }, [questions, searchTerm, selectedTag, sortBy]);
+  }, [questions, searchTerm, sortBy, selectedTag]);
 
-  // Pagination with URL synchronization
+  // Pagination
   const {
     data: paginatedQuestions,
     pagination,
@@ -92,87 +82,99 @@ const Questions = ({ currentUser, onLogin, questions, onAddQuestion, onVote, onD
     goToNextPage,
     goToPreviousPage,
     changeItemsPerPage,
-  } = useUrlPagination(filteredQuestions, {
-    defaultPage: 1,
-    defaultLimit: 10
-  });
+  } = usePagination(filteredAndSortedQuestions, 1, 10);
+
+  // Update URL when filters change
+  const updateSearchParams = (key: string, value: string) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (value) {
+      newParams.set(key, value);
+    } else {
+      newParams.delete(key);
+    }
+    setSearchParams(newParams);
+  };
 
   // Modal handlers
   const handleAskQuestion = () => setIsAskModalOpen(true);
   const handleCloseAskModal = () => setIsAskModalOpen(false);
 
-  // Handle new question submission
-  const handleQuestionSubmit = (question: {
+  // Fix: Handle new question submission with proper data structure
+  const handleQuestionSubmit = async (questionData: {
     title: string;
     description: string;
     tags: string[];
   }) => {
-    const newQuestion = {
-      id: (questions.length + 1).toString(),
-      title: question.title,
-      content: question.description,
-      tags: question.tags,
-      author: {
-        name: currentUser.username || "Anonymous",
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.username}`,
-        reputation: currentUser.role === 'admin' ? 2000 : 100
-      },
-      votes: 0,
-      answers: 0,
-      createdAt: "Just now",
-      isAccepted: false,
-      userVote: null as 'up' | 'down' | null
-    };
+    try {
+      console.log('Question form data:', questionData);
+      
+      // Validate required fields
+      if (!questionData.title?.trim() || !questionData.description?.trim() || !questionData.tags?.length) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all required fields.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    onAddQuestion(newQuestion);
-    
-    toast({
-      title: "Question Posted Successfully!",
-      description: "Your question has been posted and is now visible to the community.",
-      duration: 5000,
-    });
-    
-    handleCloseAskModal();
-  };
-
-  const handleTagClick = (tag: string) => {
-    setSelectedTag(tag);
-    // Update URL with selected tag
-    setSearchParams({ tag });
-  };
-
-  const handleDeleteQuestion = (questionId: string) => {
-    if (currentUser.role === 'admin' && onDeleteQuestion) {
-      onDeleteQuestion(questionId);
+      // Call the parent handler with the correct data structure
+      await onAddQuestion(questionData);
+      
+      // Close modal on success
+      handleCloseAskModal();
+      
+    } catch (error: any) {
+      console.error('Error in question submission:', error);
       toast({
-        title: "Question Deleted",
-        description: "The question has been successfully deleted.",
-        duration: 3000,
+        title: "Submission Error",
+        description: error.message || "Failed to submit question. Please try again.",
+        variant: "destructive",
       });
     }
   };
 
-  const handleTagClickFromCard = (tag: string) => {
-    setSelectedTag(tag);
-    setSearchParams({ tag });
+  const handleTagClick = (tagName: string) => {
+    setSelectedTag(tagName);
+    updateSearchParams('tag', tagName);
+  };
+
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    updateSearchParams('search', value);
+  };
+
+  const handleSortChange = (value: string) => {
+    setSortBy(value);
+    updateSearchParams('sort', value);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedTag('');
+    setSortBy('newest');
+    setSearchParams(new URLSearchParams());
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header
         currentUser={currentUser}
         onLogin={onLogin}
         onAskQuestion={handleAskQuestion}
       />
 
-      {/* Header Section */}
+      {/* Hero Section */}
       <div className="bg-gradient-to-r from-primary/5 to-primary/10 border-b">
         <div className="container py-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold mb-2">All Questions</h1>
+              <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
+                <MessageSquare className="h-8 w-8" />
+                All Questions
+              </h1>
               <p className="text-muted-foreground">
-                Explore all questions from the community
+                Find answers to your programming questions
               </p>
             </div>
             <Button 
@@ -191,143 +193,122 @@ const Questions = ({ currentUser, onLogin, questions, onAddQuestion, onVote, onD
       <div className="border-b bg-card">
         <div className="container py-4">
           <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-            <div className="flex flex-col sm:flex-row gap-4 flex-1">
-              {/* Search */}
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search questions..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-
-              {/* Tag Filter */}
-              <Select value={selectedTag} onValueChange={setSelectedTag}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter by tag" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Tags</SelectItem>
-                  {allTags.map(tag => (
-                    <SelectItem key={tag} value={tag}>
-                      {tag}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Sort */}
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      Newest
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="oldest">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      Oldest
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="votes">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" />
-                      Most Voted
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Search */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search questions..."
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-9"
+              />
             </div>
 
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span>{pagination.totalItems} questions</span>
-              {selectedTag !== "all" && (
-                <Badge variant="secondary" className="cursor-pointer" onClick={() => setSelectedTag("all")}>
-                  {selectedTag} ✕
+            {/* Filters */}
+            <div className="flex items-center gap-4">
+              {/* Sort */}
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <Select value={sortBy} onValueChange={handleSortChange}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Newest
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="popular">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        Popular
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="unanswered">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4" />
+                        Unanswered
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Clear Filters */}
+              {(searchTerm || selectedTag || sortBy !== 'newest') && (
+                <Button variant="outline" size="sm" onClick={clearFilters}>
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Active Filters */}
+          {(selectedTag || searchTerm) && (
+            <div className="flex items-center gap-2 mt-3">
+              <span className="text-sm text-muted-foreground">Active filters:</span>
+              {selectedTag && (
+                <Badge variant="secondary" className="gap-1">
+                  Tag: {selectedTag}
+                  <button
+                    onClick={() => {
+                      setSelectedTag('');
+                      updateSearchParams('tag', '');
+                    }}
+                    className="ml-1 hover:bg-muted-foreground/20 rounded"
+                  >
+                    ×
+                  </button>
                 </Badge>
               )}
+              {searchTerm && (
+                <Badge variant="secondary" className="gap-1">
+                  Search: "{searchTerm}"
+                  <button
+                    onClick={() => {
+                      setSearchTerm('');
+                      updateSearchParams('search', '');
+                    }}
+                    className="ml-1 hover:bg-muted-foreground/20 rounded"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              )}
+            </div>
+          )}
+
+          {/* Stats */}
+          <div className="flex items-center justify-between mt-4 pt-4 border-t">
+            <div className="flex items-center space-x-6 text-sm text-muted-foreground">
+              <span>{pagination.totalItems} questions</span>
+              <span>Showing {pagination.startIndex + 1}-{pagination.endIndex} of {pagination.totalItems}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Popular Tags */}
-      {selectedTag === "all" && (
-        <div className="border-b bg-muted/20">
-          <div className="container py-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-muted-foreground">Popular Tags</h3>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => navigate('/tags')}
-                className="text-xs"
-              >
-                View All Tags →
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {allTags.slice(0, 10).map(tag => {
-                const tagCount = questions.filter(q => q.tags?.includes(tag)).length;
-                return (
-                  <Badge
-                    key={tag}
-                    variant="outline"
-                    className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
-                    onClick={() => handleTagClick(tag)}
-                  >
-                    {tag} ({tagCount})
-                  </Badge>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Questions List */}
-      <div className="container py-8">
+      {/* Main Content */}
+      <div className="container py-8 flex-1">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-4">
-            {pagination.totalItems > 0 ? (
-              <div className="space-y-6">
-                <QuestionList 
-                  questions={paginatedQuestions} 
-                  currentUser={currentUser}
-                  onVote={onVote} 
-                  onTagClick={handleTagClickFromCard}
-                  onDelete={handleDeleteQuestion}
-                />
-                
-                {/* Pagination Controls */}
-                <PaginationControls
-                  currentPage={pagination.currentPage}
-                  totalPages={pagination.totalPages}
-                  totalItems={pagination.totalItems}
-                  itemsPerPage={pagination.itemsPerPage}
-                  startIndex={pagination.startIndex}
-                  endIndex={pagination.endIndex}
-                  hasNextPage={pagination.hasNextPage}
-                  hasPreviousPage={pagination.hasPreviousPage}
-                  onPageChange={goToPage}
-                  onNextPage={goToNextPage}
-                  onPreviousPage={goToPreviousPage}
-                  onItemsPerPageChange={changeItemsPerPage}
-                  itemsPerPageOptions={[5, 10, 20, 50]}
-                />
-              </div>
+          {/* Questions */}
+          <div className="lg:col-span-3">
+            {paginatedQuestions.length > 0 ? (
+              <QuestionList
+                questions={paginatedQuestions}
+                currentUser={currentUser}
+                onVote={onVote}
+                onTagClick={handleTagClick}
+                onDelete={onDeleteQuestion}
+              />
             ) : (
               <div className="text-center py-12">
+                <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <div className="text-muted-foreground mb-4">
-                  {searchTerm || selectedTag !== "all" 
-                    ? "No questions found matching your criteria." 
+                  {searchTerm || selectedTag
+                    ? `No questions found matching your criteria.`
                     : "No questions available yet."
                   }
                 </div>
@@ -340,9 +321,35 @@ const Questions = ({ currentUser, onLogin, questions, onAddQuestion, onVote, onD
               </div>
             )}
           </div>
+
+          {/* Sidebar */}
+          <div className="lg:col-span-1">
+            <FilterSidebar />
+          </div>
         </div>
       </div>
 
+      {/* Footer with Pagination */}
+      <Footer
+        showPagination={pagination.totalPages > 1}
+        paginationProps={{
+          currentPage: pagination.currentPage,
+          totalPages: pagination.totalPages,
+          totalItems: pagination.totalItems,
+          itemsPerPage: pagination.itemsPerPage,
+          startIndex: pagination.startIndex,
+          endIndex: pagination.endIndex,
+          hasNextPage: pagination.currentPage < pagination.totalPages,
+          hasPreviousPage: pagination.currentPage > 1,
+          onPageChange: goToPage,
+          onNextPage: goToNextPage,
+          onPreviousPage: goToPreviousPage,
+          onItemsPerPageChange: changeItemsPerPage,
+          itemsPerPageOptions: [5, 10, 20, 50]
+        }}
+      />
+
+      {/* Ask Question Modal */}
       <AskQuestionModal
         isOpen={isAskModalOpen}
         onRequestClose={handleCloseAskModal}

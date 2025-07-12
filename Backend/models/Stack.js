@@ -70,6 +70,14 @@ const stackSchema = new Schema(
       type: Number,
       default: 0,
     },
+    isLocked: {
+      type: Boolean,
+      default: false,
+    },
+    isPinned: {
+      type: Boolean,
+      default: false,
+    },
     comments: [
       {
         type: Schema.Types.ObjectId,

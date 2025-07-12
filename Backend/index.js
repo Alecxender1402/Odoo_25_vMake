@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.routes.js';
 import stackRoutes from './routes/stack.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import userRoutes from './routes/user.routes.js';
+import adminRoutes from './routes/admin.routes.js';
 
 /* --- SET ENV --- */
 dotenv.config();
@@ -39,6 +40,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/stacks', stackRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes);
 
 /* --- START SERVER --- */
 app.listen(PORT, () => {

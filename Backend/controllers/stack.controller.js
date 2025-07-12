@@ -32,6 +32,9 @@ export const getAllStacks = async (req, res) => {
         break;
     }
 
+    // Sort options: Pinned stacks always come first, then by the selected sort order.
+    sortOptions = { isPinned: -1, ...sortOptions };
+
     const stacks = await Stack.find(query).populate('creator', 'username').sort(sortOptions);
 
     res.status(200).json(stacks);
@@ -172,6 +175,10 @@ export const voteOnStack = async (req, res) => {
     const stack = await Stack.findById(stackId);
     if (!stack) {
       return res.status(404).json({ message: 'Stack not found.' });
+    }
+    // Add this check:
+    if (stack.isLocked) {
+      return res.status(403).json({ message: 'This stack is locked and cannot be voted on.' });
     }
 
     const existingVote = await StackVote.findOne({ user: userId, stack: stackId });

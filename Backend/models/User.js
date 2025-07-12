@@ -29,6 +29,10 @@ const userSchema = new Schema(
       enum: ['User', 'Admin'],
       default: 'User',
     },
+    isSuspended: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

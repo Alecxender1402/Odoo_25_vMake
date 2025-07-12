@@ -9,6 +9,7 @@ import AskQuestionModal from "@/components/layout/AskQuestionModal";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useNotifications } from "@/contexts/NotificationContext";
+import { usePagination } from "@/hooks/usePagination";
 
 interface IndexProps {
   currentUser: User;
@@ -24,6 +25,15 @@ const Index = ({ currentUser, onLogin, questions: initialQuestionsFromProps, onA
   const { addNotification } = useNotifications();
   const [isAskModalOpen, setIsAskModalOpen] = useState(false);
   const [questions, setQuestions] = useState(initialQuestionsFromProps);
+  const [displayLimit, setDisplayLimit] = useState(6); // Show initial 6 questions
+
+  // Get questions to display (recent first, limited)
+  const displayQuestions = questions.slice(0, displayLimit);
+
+  // Handle load more questions
+  const handleLoadMore = () => {
+    setDisplayLimit(prev => prev + 6);
+  };
 
   // 4. Modal handlers
   const handleAskQuestion = () => setIsAskModalOpen(true);
@@ -255,13 +265,45 @@ const Index = ({ currentUser, onLogin, questions: initialQuestionsFromProps, onA
                 View All
               </Button>
             </div>
-            {/* Pass questions as prop if your QuestionList expects it */}
-            <QuestionList 
-              questions={questions} 
-              currentUser={currentUser}
-              onVote={handleVote} 
-              onDelete={handleDeleteQuestion}
-            />
+            
+            <div className="space-y-6">
+              {/* Pass questions as prop if your QuestionList expects it */}
+              <QuestionList 
+                questions={displayQuestions} 
+                currentUser={currentUser}
+                onVote={handleVote} 
+                onDelete={handleDeleteQuestion}
+              />
+              
+              {/* Load More Button */}
+              {displayLimit < questions.length && (
+                <div className="text-center pt-6">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleLoadMore}
+                    className="px-8"
+                  >
+                    Load More Questions ({questions.length - displayLimit} remaining)
+                  </Button>
+                </div>
+              )}
+              
+              {/* No Questions Message */}
+              {questions.length === 0 && (
+                <div className="text-center py-12">
+                  <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <div className="text-muted-foreground mb-4">
+                    No questions yet. Be the first to ask!
+                  </div>
+                  {currentUser.role !== "guest" && (
+                    <Button onClick={handleAskQuestion}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Ask the First Question
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Sidebar */}

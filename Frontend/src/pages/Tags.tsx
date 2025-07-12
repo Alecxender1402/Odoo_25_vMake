@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Plus, Search, Hash, TrendingUp, Clock } from "lucide-react";
 import AskQuestionModal from "@/components/layout/AskQuestionModal";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { usePagination } from "@/hooks/usePagination";
 
 interface TagsProps {
   currentUser: User;
@@ -66,6 +68,16 @@ const Tags = ({ currentUser, onLogin, questions, onAddQuestion }: TagsProps) => 
       tag.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [tagStats, searchTerm]);
+
+  // Pagination for tags
+  const {
+    data: paginatedTags,
+    pagination,
+    goToPage,
+    goToNextPage,
+    goToPreviousPage,
+    changeItemsPerPage,
+  } = usePagination(filteredTags, 1, 12);
 
   // Modal handlers
   const handleAskQuestion = () => setIsAskModalOpen(true);
@@ -158,7 +170,7 @@ const Tags = ({ currentUser, onLogin, questions, onAddQuestion }: TagsProps) => 
             </div>
 
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span>{filteredTags.length} tags</span>
+              <span>{pagination.totalItems} tags</span>
               <span>{questions.length} questions</span>
             </div>
           </div>
@@ -167,66 +179,85 @@ const Tags = ({ currentUser, onLogin, questions, onAddQuestion }: TagsProps) => 
 
       {/* Tags Grid */}
       <div className="container py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredTags.map((tag) => (
-            <Card
-              key={tag.name}
-              className="hover:shadow-md transition-all cursor-pointer border-l-4 border-l-transparent hover:border-l-primary"
-              onClick={() => handleTagClick(tag.name)}
-            >
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center justify-between">
-                  <Badge variant="secondary" className="text-sm font-medium">
-                    {tag.name}
-                  </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {tag.count} question{tag.count !== 1 ? 's' : ''}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  {/* Stats */}
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <TrendingUp className="h-3 w-3" />
-                      <span>{tag.avgVotes} avg votes</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span>{tag.totalAnswers} answers</span>
-                    </div>
-                  </div>
-
-                  {/* Recent Questions */}
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-2">Recent questions:</p>
-                    <div className="space-y-1">
-                      {tag.recentQuestions.slice(0, 2).map((question) => (
-                        <div
-                          key={question.id}
-                          className="text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer truncate"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/question/${question.id}`);
-                          }}
-                        >
-                          {question.title}
+        {pagination.totalItems > 0 ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {paginatedTags.map((tag) => (
+                <Card
+                  key={tag.name}
+                  className="hover:shadow-md transition-all cursor-pointer border-l-4 border-l-transparent hover:border-l-primary"
+                  onClick={() => handleTagClick(tag.name)}
+                >
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center justify-between">
+                      <Badge variant="secondary" className="text-sm font-medium">
+                        {tag.name}
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {tag.count} question{tag.count !== 1 ? 's' : ''}
+                      </span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="space-y-3">
+                      {/* Stats */}
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <TrendingUp className="h-3 w-3" />
+                          <span>{tag.avgVotes} avg votes</span>
                         </div>
-                      ))}
-                      {tag.recentQuestions.length === 0 && (
-                        <div className="text-xs text-muted-foreground italic">
-                          No recent questions
+                        <div className="flex items-center gap-1">
+                          <span>{tag.totalAnswers} answers</span>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                      </div>
 
-        {filteredTags.length === 0 && (
+                      {/* Recent Questions */}
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Recent questions:</p>
+                        <div className="space-y-1">
+                          {tag.recentQuestions.slice(0, 2).map((question) => (
+                            <div
+                              key={question.id}
+                              className="text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer truncate"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/question/${question.id}`);
+                              }}
+                            >
+                              {question.title}
+                            </div>
+                          ))}
+                          {tag.recentQuestions.length === 0 && (
+                            <div className="text-xs text-muted-foreground italic">
+                              No recent questions
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            
+            {/* Pagination Controls */}
+            <PaginationControls
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              totalItems={pagination.totalItems}
+              itemsPerPage={pagination.itemsPerPage}
+              startIndex={pagination.startIndex}
+              endIndex={pagination.endIndex}
+              hasNextPage={pagination.hasNextPage}
+              hasPreviousPage={pagination.hasPreviousPage}
+              onPageChange={goToPage}
+              onNextPage={goToNextPage}
+              onPreviousPage={goToPreviousPage}
+              onItemsPerPageChange={changeItemsPerPage}
+              itemsPerPageOptions={[8, 12, 24, 48]}
+            />
+          </div>
+        ) : (
           <div className="text-center py-12">
             <Hash className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <div className="text-muted-foreground mb-4">

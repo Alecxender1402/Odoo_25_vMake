@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { ArrowUp, ArrowDown, Calendar, ArrowLeft, Reply } from "lucide-react";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { useToast } from "@/hooks/use-toast";
+import { usePagination } from "@/hooks/usePagination";
 
 interface Comment {
   id: string;
@@ -94,6 +96,16 @@ export const QuestionDetail = ({ currentUser, onLogin, questions, onUpdateQuesti
   const [comments, setComments] = useState<Comment[]>(mockComments);
   const [newComment, setNewComment] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
+  // Pagination for comments
+  const {
+    data: paginatedComments,
+    pagination: commentsPagination,
+    goToPage: goToCommentsPage,
+    goToNextPage: goToNextCommentsPage,
+    goToPreviousPage: goToPreviousCommentsPage,
+    changeItemsPerPage: changeCommentsPerPage,
+  } = usePagination(comments, 1, 5);
 
   useEffect(() => {
     // Find the question by ID
@@ -354,67 +366,96 @@ export const QuestionDetail = ({ currentUser, onLogin, questions, onUpdateQuesti
                 {comments.length} Answer{comments.length !== 1 ? 's' : ''}
               </h2>
               
-              <div className="space-y-6">
-                {comments.map((comment) => (
-                  <Card key={comment.id}>
-                    <CardContent className="pt-6">
-                      <div className="flex items-start space-x-4">
-                        {/* Vote Section */}
-                        <div className="flex flex-col items-center space-y-2 min-w-[50px]">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleVote('up', 'comment', comment.id)}
-                            className={`p-1 hover:bg-green-50 ${
-                              comment.userVote === 'up' ? 'bg-green-100 text-green-600' : 'text-gray-500'
-                            }`}
-                            disabled={currentUser.role === 'guest'}
-                          >
-                            <ArrowUp className="h-4 w-4" />
-                          </Button>
-                          <span className={`text-sm font-semibold ${
-                            comment.votes > 0 ? 'text-green-600' : 
-                            comment.votes < 0 ? 'text-red-600' : 'text-gray-500'
-                          }`}>
-                            {comment.votes}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleVote('down', 'comment', comment.id)}
-                            className={`p-1 hover:bg-red-50 ${
-                              comment.userVote === 'down' ? 'bg-red-100 text-red-600' : 'text-gray-500'
-                            }`}
-                            disabled={currentUser.role === 'guest'}
-                          >
-                            <ArrowDown className="h-4 w-4" />
-                          </Button>
-                        </div>
+              {commentsPagination.totalItems > 0 ? (
+                <div className="space-y-6">
+                  <div className="space-y-6">
+                    {paginatedComments.map((comment) => (
+                      <Card key={comment.id}>
+                        <CardContent className="pt-6">
+                          <div className="flex items-start space-x-4">
+                            {/* Vote Section */}
+                            <div className="flex flex-col items-center space-y-2 min-w-[50px]">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleVote('up', 'comment', comment.id)}
+                                className={`p-1 hover:bg-green-50 ${
+                                  comment.userVote === 'up' ? 'bg-green-100 text-green-600' : 'text-gray-500'
+                                }`}
+                                disabled={currentUser.role === 'guest'}
+                              >
+                                <ArrowUp className="h-4 w-4" />
+                              </Button>
+                              <span className={`text-sm font-semibold ${
+                                comment.votes > 0 ? 'text-green-600' : 
+                                comment.votes < 0 ? 'text-red-600' : 'text-gray-500'
+                              }`}>
+                                {comment.votes}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleVote('down', 'comment', comment.id)}
+                                className={`p-1 hover:bg-red-50 ${
+                                  comment.userVote === 'down' ? 'bg-red-100 text-red-600' : 'text-gray-500'
+                                }`}
+                                disabled={currentUser.role === 'guest'}
+                              >
+                                <ArrowDown className="h-4 w-4" />
+                              </Button>
+                            </div>
 
-                        {/* Comment Content */}
-                        <div className="flex-1">
-                          <div 
-                            className="prose prose-sm max-w-none mb-3"
-                            dangerouslySetInnerHTML={{ __html: comment.content }}
-                          />
-                          
-                          <div className="flex items-center justify-between text-sm text-muted-foreground">
-                            <span>{comment.createdAt}</span>
-                            <div className="flex items-center space-x-2">
-                              <Avatar className="h-5 w-5">
-                                <AvatarImage src={comment.author.avatar} />
-                                <AvatarFallback>{comment.author.name[0]}</AvatarFallback>
-                              </Avatar>
-                              <span className="font-medium">{comment.author.name}</span>
-                              <span className="text-xs">({comment.author.reputation} rep)</span>
+                            {/* Comment Content */}
+                            <div className="flex-1">
+                              <div 
+                                className="prose prose-sm max-w-none mb-3"
+                                dangerouslySetInnerHTML={{ __html: comment.content }}
+                              />
+                              
+                              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                                <span>{comment.createdAt}</span>
+                                <div className="flex items-center space-x-2">
+                                  <Avatar className="h-5 w-5">
+                                    <AvatarImage src={comment.author.avatar} />
+                                    <AvatarFallback>{comment.author.name[0]}</AvatarFallback>
+                                  </Avatar>
+                                  <span className="font-medium">{comment.author.name}</span>
+                                  <span className="text-xs">({comment.author.reputation} rep)</span>
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                  
+                  {/* Comments Pagination */}
+                  {commentsPagination.totalPages > 1 && (
+                    <PaginationControls
+                      currentPage={commentsPagination.currentPage}
+                      totalPages={commentsPagination.totalPages}
+                      totalItems={commentsPagination.totalItems}
+                      itemsPerPage={commentsPagination.itemsPerPage}
+                      startIndex={commentsPagination.startIndex}
+                      endIndex={commentsPagination.endIndex}
+                      hasNextPage={commentsPagination.hasNextPage}
+                      hasPreviousPage={commentsPagination.hasPreviousPage}
+                      onPageChange={goToCommentsPage}
+                      onNextPage={goToNextCommentsPage}
+                      onPreviousPage={goToPreviousCommentsPage}
+                      onItemsPerPageChange={changeCommentsPerPage}
+                      itemsPerPageOptions={[5, 10, 20]}
+                      showInfo={false}
+                      className="mt-6"
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No answers yet. Be the first to answer this question!</p>
+                </div>
+              )}
             </div>
 
             {/* Add Comment Section */}

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Filter, TrendingUp, Clock, Award } from "lucide-react";
+import { Plus, Search, Filter, TrendingUp, Clock } from "lucide-react";
 import AskQuestionModal from "@/components/layout/AskQuestionModal";
 import { useToast } from "@/hooks/use-toast";
 import { useSearchParams, useNavigate } from "react-router-dom";
@@ -72,8 +72,6 @@ const Questions = ({ currentUser, onLogin, questions, onAddQuestion, onVote }: Q
         return filtered.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       case "votes":
         return filtered.sort((a, b) => b.votes - a.votes);
-      case "answers":
-        return filtered.sort((a, b) => b.answers - a.answers);
       default:
         return filtered;
     }
@@ -211,12 +209,6 @@ const Questions = ({ currentUser, onLogin, questions, onAddQuestion, onVote }: Q
                     <div className="flex items-center gap-2">
                       <TrendingUp className="h-4 w-4" />
                       Most Voted
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="answers">
-                    <div className="flex items-center gap-2">
-                      <Award className="h-4 w-4" />
-                      Most Answers
                     </div>
                   </SelectItem>
                 </SelectContent>

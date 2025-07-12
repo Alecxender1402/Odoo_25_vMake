@@ -55,10 +55,8 @@ export const QuestionCard = ({ question, onVote, onTagClick }: QuestionCardProps
     content,
     author,
     votes,
-    answers,
     tags,
     createdAt,
-    isAccepted,
     userVote,
   } = question;
 
@@ -68,8 +66,8 @@ export const QuestionCard = ({ question, onVote, onTagClick }: QuestionCardProps
       onClick={handleCardClick}
     >
       <div className="flex gap-6">
-        {/* Vote and Stats Section */}
-        <div className="flex flex-col items-center space-y-4 min-w-fit">
+        {/* Vote Section */}
+        <div className="flex flex-col items-center space-y-2 min-w-fit">
           {/* Votes */}
           <div className="flex flex-col items-center space-y-1">
             <Button 
@@ -89,14 +87,6 @@ export const QuestionCard = ({ question, onVote, onTagClick }: QuestionCardProps
             >
               <ArrowDown className="h-4 w-4" />
             </Button>
-          </div>
-          
-          {/* Answer count */}
-          <div className={`flex flex-col items-center space-y-1 p-2 rounded-md ${
-            isAccepted ? 'bg-success text-success-foreground' : answers > 0 ? 'bg-muted' : 'bg-background'
-          }`}>
-            <span className="text-sm font-medium">{answers}</span>
-            <span className="text-xs">answers</span>
           </div>
         </div>
 

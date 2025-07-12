@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { ArrowUp, ArrowDown, MessageSquare, Eye, Calendar, ArrowLeft, Reply } from "lucide-react";
+import { ArrowUp, ArrowDown, Calendar, ArrowLeft, Reply } from "lucide-react";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { useToast } from "@/hooks/use-toast";
@@ -329,14 +329,6 @@ export const QuestionDetail = ({ currentUser, onLogin, questions, onUpdateQuesti
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
                       <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-1">
-                          <Eye className="h-4 w-4" />
-                          <span>{question.views} views</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <MessageSquare className="h-4 w-4" />
-                          <span>{question.answers} answers</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
                           <Calendar className="h-4 w-4" />
                           <span>{question.createdAt}</span>
                         </div>
@@ -487,14 +479,6 @@ export const QuestionDetail = ({ currentUser, onLogin, questions, onUpdateQuesti
                 <div className="flex justify-between">
                   <span>Asked:</span>
                   <span>{question.createdAt}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Views:</span>
-                  <span>{question.views}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Answers:</span>
-                  <span>{question.answers}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Score:</span>

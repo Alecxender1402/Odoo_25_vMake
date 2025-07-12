@@ -16,9 +16,10 @@ interface QuestionsProps {
   questions: any[];
   onAddQuestion: (question: any) => void;
   onVote: (questionId: string, voteType: 'up' | 'down') => void;
+  onDeleteQuestion?: (questionId: string) => void;
 }
 
-const Questions = ({ currentUser, onLogin, questions, onAddQuestion, onVote }: QuestionsProps) => {
+const Questions = ({ currentUser, onLogin, questions, onAddQuestion, onVote, onDeleteQuestion }: QuestionsProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -27,11 +28,15 @@ const Questions = ({ currentUser, onLogin, questions, onAddQuestion, onVote }: Q
   const [selectedTag, setSelectedTag] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
 
-  // Initialize tag from URL params
+  // Initialize search and tag from URL params
   useEffect(() => {
     const tagFromUrl = searchParams.get('tag');
+    const searchFromUrl = searchParams.get('search');
     if (tagFromUrl) {
       setSelectedTag(tagFromUrl);
+    }
+    if (searchFromUrl) {
+      setSearchTerm(searchFromUrl);
     }
   }, [searchParams]);
 
@@ -119,6 +124,17 @@ const Questions = ({ currentUser, onLogin, questions, onAddQuestion, onVote }: Q
     setSelectedTag(tag);
     // Update URL with selected tag
     setSearchParams({ tag });
+  };
+
+  const handleDeleteQuestion = (questionId: string) => {
+    if (currentUser.role === 'admin' && onDeleteQuestion) {
+      onDeleteQuestion(questionId);
+      toast({
+        title: "Question Deleted",
+        description: "The question has been successfully deleted.",
+        duration: 3000,
+      });
+    }
   };
 
   const handleTagClickFromCard = (tag: string) => {
@@ -268,8 +284,10 @@ const Questions = ({ currentUser, onLogin, questions, onAddQuestion, onVote }: Q
             {filteredQuestions.length > 0 ? (
               <QuestionList 
                 questions={filteredQuestions} 
+                currentUser={currentUser}
                 onVote={onVote} 
                 onTagClick={handleTagClickFromCard}
+                onDelete={handleDeleteQuestion}
               />
             ) : (
               <div className="text-center py-12">

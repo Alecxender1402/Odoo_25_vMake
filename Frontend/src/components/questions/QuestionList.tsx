@@ -1,4 +1,5 @@
 import { QuestionCard } from "./QuestionCard";
+import { User } from "@/components/layout/Header";
 
 // Mock data for demonstration
 const mockQuestions = [
@@ -174,10 +175,12 @@ const mockQuestions = [
   }
 ];
 
-export const QuestionList = ({ questions = mockQuestions, onVote, onTagClick }: { 
+export const QuestionList = ({ questions = mockQuestions, currentUser, onVote, onTagClick, onDelete }: { 
   questions?: typeof mockQuestions; 
+  currentUser?: User;
   onVote?: (questionId: string, voteType: 'up' | 'down') => void;
   onTagClick?: (tag: string) => void;
+  onDelete?: (questionId: string) => void;
 }) => {
   return (
     <div className="space-y-4">
@@ -185,8 +188,10 @@ export const QuestionList = ({ questions = mockQuestions, onVote, onTagClick }: 
         <QuestionCard 
           key={question.id} 
           question={question} 
+          currentUser={currentUser}
           onVote={onVote} 
           onTagClick={onTagClick}
+          onDelete={onDelete}
         />
       ))}
     </div>

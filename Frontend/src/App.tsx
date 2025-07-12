@@ -277,6 +277,18 @@ const App = () => {
     });
   };
 
+  // Handle question deletion (admin only)
+  const handleDeleteQuestion = (questionId: string) => {
+    if (currentUser.role === 'admin') {
+      setQuestions(prev => prev.filter(q => q.id !== questionId));
+      toast({
+        title: "Question Deleted",
+        description: "The question has been successfully deleted.",
+        duration: 3000,
+      });
+    }
+  };
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -293,6 +305,7 @@ const App = () => {
                   onLogin={setCurrentUser}
                   questions={questions}
                   onAddQuestion={handleAddQuestion}
+                  onDeleteQuestion={handleDeleteQuestion}
                 />
               } 
             />
@@ -305,6 +318,7 @@ const App = () => {
                   questions={questions}
                   onAddQuestion={handleAddQuestion}
                   onVote={handleVote}
+                  onDeleteQuestion={handleDeleteQuestion}
                 />
               } 
             />

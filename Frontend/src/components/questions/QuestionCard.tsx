@@ -1,9 +1,10 @@
-import { ArrowUp, ArrowDown, Calendar } from "lucide-react";
+import { ArrowUp, ArrowDown, Calendar, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate } from "react-router-dom";
+import { User } from "@/components/layout/Header";
 
 interface QuestionCardProps {
   question: {
@@ -22,11 +23,13 @@ interface QuestionCardProps {
     isAccepted?: boolean;
     userVote?: 'up' | 'down' | null;
   };
+  currentUser?: User;
   onVote?: (questionId: string, voteType: 'up' | 'down') => void;
   onTagClick?: (tag: string) => void;
+  onDelete?: (questionId: string) => void;
 }
 
-export const QuestionCard = ({ question, onVote, onTagClick }: QuestionCardProps) => {
+export const QuestionCard = ({ question, currentUser, onVote, onTagClick, onDelete }: QuestionCardProps) => {
   const navigate = useNavigate();
 
   const handleCardClick = () => {
@@ -37,6 +40,13 @@ export const QuestionCard = ({ question, onVote, onTagClick }: QuestionCardProps
     e.stopPropagation(); // Prevent card click when voting
     if (voteType && onVote) {
       onVote(question.id, voteType);
+    }
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click when deleting
+    if (onDelete && window.confirm('Are you sure you want to delete this question? This action cannot be undone.')) {
+      onDelete(question.id);
     }
   };
 
@@ -124,15 +134,30 @@ export const QuestionCard = ({ question, onVote, onTagClick }: QuestionCardProps
                 <span>{createdAt}</span>
               </div>
               
-              {/* Author info */}
               <div className="flex items-center space-x-2">
-                <div className="text-sm font-medium text-foreground">
-                  {author.name}
+                {/* Admin delete button */}
+                {currentUser?.role === 'admin' && onDelete && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDeleteClick}
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                    title="Delete question (Admin only)"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+                
+                {/* Author info */}
+                <div className="flex items-center space-x-2">
+                  <div className="text-sm font-medium text-foreground">
+                    {author.name}
+                  </div>
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={author.avatar} alt={author.name} />
+                    <AvatarFallback>{author.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
                 </div>
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={author.avatar} alt={author.name} />
-                  <AvatarFallback>{author.name.charAt(0)}</AvatarFallback>
-                </Avatar>
               </div>
             </div>
           </div>

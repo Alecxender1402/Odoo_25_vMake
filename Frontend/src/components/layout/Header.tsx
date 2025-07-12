@@ -2,8 +2,9 @@ import { Search, Bell, User, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LoginMenu } from "./LoginMenu";
-import { Link, useLocation } from "react-router-dom";
-import { NotificationDropdown } from "@/components/notifications/NotificationDropdown"; 
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
+import { useState } from "react"; 
 
 export type UserRole = "guest" | "user" | "admin";
 
@@ -20,6 +21,25 @@ interface HeaderProps {
 
 export const Header = ({ currentUser, onLogin, onAskQuestion }: HeaderProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      navigate(`/questions?search=${encodeURIComponent(searchTerm.trim())}`);
+    }
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch(e);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -55,13 +75,16 @@ export const Header = ({ currentUser, onLogin, onAskQuestion }: HeaderProps) => 
 
         {/* Search */}
         <div className="flex-1 max-w-md mx-6">
-          <div className="relative">
+          <form onSubmit={handleSearch} className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search questions..."
               className="pl-10 bg-background border-muted-foreground/20 focus:border-primary"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              onKeyPress={handleKeyPress}
             />
-          </div>
+          </form>
         </div>
 
         {/* Actions */}

@@ -15,9 +15,10 @@ interface IndexProps {
   onLogin: (user: User) => void;
   questions: any[];
   onAddQuestion: (question: any) => void;
+  onDeleteQuestion?: (questionId: string) => void;
 }
 
-const Index = ({ currentUser, onLogin, questions: initialQuestionsFromProps, onAddQuestion }: IndexProps) => {
+const Index = ({ currentUser, onLogin, questions: initialQuestionsFromProps, onAddQuestion, onDeleteQuestion }: IndexProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { addNotification } = useNotifications();
@@ -111,6 +112,21 @@ const Index = ({ currentUser, onLogin, questions: initialQuestionsFromProps, onA
       description: `Your ${voteType}vote has been recorded.`,
       duration: 2000,
     });
+  };
+
+  // 7. Handle question deletion (admin only)
+  const handleDeleteQuestion = (questionId: string) => {
+    if (currentUser.role === 'admin') {
+      setQuestions((prev) => prev.filter(q => q.id !== questionId));
+      if (onDeleteQuestion) {
+        onDeleteQuestion(questionId);
+      }
+      toast({
+        title: "Question Deleted",
+        description: "The question has been successfully deleted.",
+        duration: 3000,
+      });
+    }
   };
 
   // Demo function to trigger notifications (for testing)
@@ -240,7 +256,12 @@ const Index = ({ currentUser, onLogin, questions: initialQuestionsFromProps, onA
               </Button>
             </div>
             {/* Pass questions as prop if your QuestionList expects it */}
-            <QuestionList questions={questions} onVote={handleVote} />
+            <QuestionList 
+              questions={questions} 
+              currentUser={currentUser}
+              onVote={handleVote} 
+              onDelete={handleDeleteQuestion}
+            />
           </div>
 
           {/* Sidebar */}

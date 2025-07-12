@@ -3,22 +3,24 @@ import {
   getAllStacks,
   getStackById,
   createStack,
-  upvoteStack,
+  voteOnStack,
   addComment,
+  markAsSolution,
+  voteOnComment,
 } from '../controllers/stack.controller.js';
 import { verifyToken } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
 /* --- PUBLIC ROUTES --- */
-// Anyone can view all stacks or a single stack
 router.get('/', getAllStacks);
 router.get('/:id', getStackById);
 
 /* --- PRIVATE ROUTES --- */
-// Only logged-in users can create, vote, or comment
 router.post('/', verifyToken, createStack);
-router.post('/:id/vote', verifyToken, upvoteStack);
+router.post('/:id/vote', verifyToken, voteOnStack);
 router.post('/:id/comments', verifyToken, addComment);
+router.post('/:id/solution', verifyToken, markAsSolution);
+router.post('/:id/comment/vote', verifyToken, voteOnComment);
 
 export default router;

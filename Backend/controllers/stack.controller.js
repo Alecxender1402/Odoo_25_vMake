@@ -1,6 +1,7 @@
 import { Stack } from '../models/Stack.js';
-import { Vote } from '../models/Vote.js';
+import { StackVote } from '../models/StackVote.js';
 import { Comment } from '../models/Comment.js';
+import { CommentVote } from '../models/CommentVote.js';
 
 // @desc    Get all stacks
 // @route   GET /api/stacks
@@ -40,48 +41,15 @@ export const getStackById = async (req, res) => {
 // @access  Private
 export const createStack = async (req, res) => {
   try {
-    const { title, description, technologies } = req.body;
+    const { title, description, tags } = req.body;
     const newStack = new Stack({
       title,
       description,
-      technologies,
-      creator: req.userId, // This comes from the verifyToken middleware
+      tags,
+      creator: req.userId,
     });
     await newStack.save();
     res.status(201).json(newStack);
-  } catch (error) {
-    res.status(500).json({ message: 'Something went wrong.', error: error.message });
-  }
-};
-
-// @desc    Upvote or remove upvote from a stack
-// @route   POST /api/stacks/:id/vote
-// @access  Private
-export const upvoteStack = async (req, res) => {
-  try {
-    const stackId = req.params.id;
-    const { userId } = req; // This comes from the verifyToken middleware
-
-    const stack = await Stack.findById(stackId);
-    if (!stack) {
-      return res.status(404).json({ message: 'Stack not found.' });
-    }
-
-    const existingVote = await Vote.findOne({ user: userId, stack: stackId });
-
-    if (existingVote) {
-      // If vote exists, remove it (un-vote)
-      await Vote.findByIdAndDelete(existingVote._id);
-      stack.upvoteCount -= 1;
-      await stack.save();
-      return res.status(200).json({ message: 'Vote removed.', stack });
-    }
-    // If vote does not exist, add it (up-vote)
-    const newVote = new Vote({ user: userId, stack: stackId });
-    await newVote.save();
-    stack.upvoteCount += 1;
-    await stack.save();
-    return res.status(200).json({ message: 'Stack upvoted successfully.', stack });
   } catch (error) {
     res.status(500).json({ message: 'Something went wrong.', error: error.message });
   }
@@ -113,5 +81,143 @@ export const addComment = async (req, res) => {
     res.status(201).json(populatedComment);
   } catch (error) {
     res.status(500).json({ message: 'Something went wrong.', error: error.message });
+  }
+};
+
+// @desc    Mark a comment as the solution for a stack
+// @route   POST /api/stacks/:stackId/comments/:commentId/solution
+// @access  Private (Stack Owner only)
+export const markAsSolution = async (req, res) => {
+  try {
+    const { stackId, commentId } = req.params;
+    const { userId } = req;
+
+    const stack = await Stack.findById(stackId);
+    if (!stack) {
+      return res.status(404).json({ message: 'Stack not found.' });
+    }
+
+    if (stack.creator.toString() !== userId) {
+      return res.status(403).json({ message: 'Only the stack owner can mark a solution.' });
+    }
+
+    const comment = await Comment.findById(commentId);
+    if (!comment || comment.stack.toString() !== stackId) {
+      return res.status(404).json({ message: 'Comment not found on this stack.' });
+    }
+
+    if (stack.solution) {
+      await Comment.findByIdAndUpdate(stack.solution, { isSolution: false });
+    }
+
+    comment.isSolution = true;
+    stack.solution = comment._id;
+
+    await comment.save();
+    await stack.save();
+
+    res.status(200).json({ message: 'Comment marked as solution.', stack });
+  } catch (error) {
+    res.status(500).json({ message: 'Something went wrong.', error: error.message });
+  }
+};
+
+// @desc    Vote on a stack (upvote or downvote)
+// @route   POST /api/stacks/:id/vote
+// @access  Private
+export const voteOnStack = async (req, res) => {
+  try {
+    const { id: stackId } = req.params;
+    const { userId } = req;
+    const { type } = req.body;
+
+    if (type !== 'up' && type !== 'down') {
+      return res.status(400).json({ message: 'Invalid vote type.' });
+    }
+
+    const stack = await Stack.findById(stackId);
+    if (!stack) {
+      return res.status(404).json({ message: 'Stack not found.' });
+    }
+
+    const existingVote = await StackVote.findOne({ user: userId, stack: stackId });
+
+    if (existingVote) {
+      if (existingVote.type === type) {
+        await StackVote.findByIdAndDelete(existingVote._id);
+        if (type === 'up') stack.upvotes -= 1;
+        else stack.downvotes -= 1;
+      } else {
+        if (existingVote.type === 'up') stack.upvotes -= 1;
+        else stack.downvotes -= 1;
+
+        if (type === 'up') stack.upvotes += 1;
+        else stack.downvotes += 1;
+
+        existingVote.type = type;
+        await existingVote.save();
+      }
+    } else {
+      await StackVote.create({ user: userId, stack: stackId, type });
+      if (type === 'up') stack.upvotes += 1;
+      else stack.downvotes += 1;
+    }
+
+    stack.voteScore = stack.upvotes - stack.downvotes;
+    await stack.save();
+
+    return res.status(200).json(stack);
+  } catch (error) {
+    return res.status(500).json({ message: 'Something went wrong.', error: error.message });
+  }
+};
+
+// @desc    Vote on a comment (upvote or downvote)
+// @route   POST /api/stacks/:stackId/comments/:commentId/vote
+// @access  Private
+export const voteOnComment = async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    const { userId } = req;
+    const { type } = req.body;
+
+    if (type !== 'up' && type !== 'down') {
+      return res.status(400).json({ message: 'Invalid vote type.' });
+    }
+
+    const comment = await Comment.findById(commentId);
+    if (!comment) {
+      return res.status(404).json({ message: 'Comment not found.' });
+    }
+
+    const existingVote = await CommentVote.findOne({ user: userId, comment: commentId });
+
+    if (existingVote) {
+      if (existingVote.type === type) {
+        await CommentVote.findByIdAndDelete(existingVote._id);
+        if (type === 'up') comment.upvotes -= 1;
+        else comment.downvotes -= 1;
+      } else {
+        if (existingVote.type === 'up') comment.upvotes -= 1;
+        else comment.downvotes -= 1;
+
+        if (type === 'up') comment.upvotes += 1;
+        else comment.downvotes += 1;
+
+        existingVote.type = type;
+        await existingVote.save();
+      }
+    } else {
+      await CommentVote.create({ user: userId, comment: commentId, type });
+      if (type === 'up') comment.upvotes += 1;
+      else comment.downvotes += 1;
+    }
+
+    comment.voteScore = comment.upvotes - comment.downvotes;
+    await comment.save();
+
+    return res.status(200).json(comment);
+  } catch (error) {
+    return res.status(500).json({ message: 'Something went wrong.', error: error.message });
   }
 };
